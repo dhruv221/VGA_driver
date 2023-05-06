@@ -40,29 +40,25 @@ component counter_10bit is
         clk_25mhz : in std_logic;
         rst : in std_logic);
 end component;
+-----------------------------------
+----------------hlogic-------------
+component hlogic is
+  Port (hcounter : in std_logic_vector(9 downto 0);
+        h_703 : inout std_logic;
+        h_800 : inout std_logic;
+        h_000 : inout std_logic;
+        h_639 : inout std_logic);
+end component;
 -------------------------------------
-------------------hlogic---------------
---component hlogic is
---  Port (hcounter : in std_logic_vector(9 downto 0);
---        h_703 : inout std_logic;
---        h_800 : inout std_logic;
---        h_000 : inout std_logic;
---        h_639 : inout std_logic;
---        hsync : out std_logic;
---        rst   : out std_logic);
---end component;
----------------------------------------
-------------------hlogic---------------
---component vlogic
---  Port (vcounter : in std_logic_vector(9 downto 0);
---        v_000 : inout std_logic;
---        v_522 : inout std_logic;
---        v_525 : inout std_logic;
---        v_479 : inout std_logic;
---        vsync : out std_logic;
---        rst   : out std_logic);
---end component;
----------------------------------------
+----------------hlogic---------------
+component vlogic
+  Port (vcounter : in std_logic_vector(9 downto 0);
+        v_000 : inout std_logic;
+        v_522 : inout std_logic;
+        v_525 : inout std_logic;
+        v_479 : inout std_logic);
+end component;
+-------------------------------------
 begin
 
 clock_src_25mhz : clk_wiz_0 port map ( -- Clock out ports  
@@ -74,56 +70,72 @@ clock_src_25mhz : clk_wiz_0 port map ( -- Clock out ports
                                        clk_in1 => clk_100mhz);
                                        
 H_counter : counter_10bit port map (clk_25mhz => clk_25mhz,
-                                    rst => hrst,
+                                    rst => h_800,
                                     q => hcounter);
                                     
---H_logic : hlogic port map(hcounter => hcounter,
---                          h_703 => h_703,
---                          h_800 => h_800,
---                          h_000 => h_000,
---                          h_639 => h_639,
---                          hsync => hsync,
---                          rst   => hrst);
+H_logic : hlogic port map(hcounter => hcounter,
+                          h_703 => h_703,
+                          h_800 => h_800,
+                          h_000 => h_000,
+                          h_639 => h_639);
                           
-V_counter : counter_10bit port map (clk_25mhz => hrst,
-                                    rst => vrst,
+V_counter : counter_10bit port map (clk_25mhz => h_800,
+                                    rst => v_525,
                                     q => vcounter);
  
---V_logic : vlogic port map(vcounter => vcounter,
---                          v_525 => v_525,
---                          v_522 => v_522,
---                          v_000 => v_000,
---                          v_479 => v_479,
---                          vsync => vsync,
---                          rst   => vrst);
+V_logic : vlogic port map(vcounter => vcounter,
+                          v_525 => v_525,
+                          v_522 => v_522,
+                          v_000 => v_000,
+                          v_479 => v_479);
 
+
+process(h_000, h_703)
+begin
+if (h_000 = '1') then
+    hsync <= '1';
+elsif (h_703 = '1') then
+    hsync <= '0';
+end if;
+end process;
+
+process(v_000, v_522)
+begin
+if (v_000 = '1') then
+    vsync <= '1';
+elsif (v_522 = '1') then
+    vsync <= '0';
+end if;
+end process;
+
+
+--process(hcounter, vcounter)
+--begin
+--if (to_integer(unsigned(hcounter)) > 703 and to_integer(unsigned(hcounter)) < 799) then
+--    hsync <= '0';
+--elsif (to_integer(unsigned(hcounter)) = 799) then
+--    hrst <= '1';
+--else
+--    hsync <= '1';
+--    hrst <= '0';
+--end if;
+--if (to_integer(unsigned(vcounter)) > 522 and to_integer(unsigned(vcounter)) < 525) then
+--    vsync <= '0';
+--elsif (to_integer(unsigned(vcounter)) = 525) then
+--    vrst <= '1';
+--else
+--    vsync <= '1';
+--    vrst <= '0';
+--end if;
 
 
 process(hcounter, vcounter)
 begin
-if (to_integer(unsigned(hcounter)) > 703 and to_integer(unsigned(hcounter)) < 799) then
-    hsync <= '0';
-elsif (to_integer(unsigned(hcounter)) = 799) then
-    hrst <= '1';
-else
-    hsync <= '1';
-    hrst <= '0';
-end if;
-if (to_integer(unsigned(vcounter)) > 522 and to_integer(unsigned(vcounter)) < 525) then
-    vsync <= '0';
-elsif (to_integer(unsigned(vcounter)) = 525) then
-    vrst <= '1';
-else
-    vsync <= '1';
-    vrst <= '0';
-end if;
-
-
-
-if (to_integer(unsigned(hcounter)) < 639 and to_integer(unsigned(vcounter)) < 479) then
-    red <= "1100";
+if (to_integer(unsigned(hcounter)) > 160 and to_integer(unsigned(hcounter)) < 480 and 
+to_integer(unsigned(vcounter)) > 120 and to_integer(unsigned(vcounter)) < 360) then
+    red <= "0000";
     blue <= "1111";
-    green <= "0000";
+    green <= "1111";
 else
     red <= "0000";
     blue <= "0000";
@@ -132,6 +144,9 @@ end if;
 end process;
 
 
+--    red <= "0000";
+--    blue <= "0000";
+--    green <= "0000";
 reset <= '0';
 vclock <= clk_25mhz and hrst;
 end Behavioral;

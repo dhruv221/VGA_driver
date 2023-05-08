@@ -21,9 +21,10 @@ architecture Behavioral of vga_driver is
     signal vclock, vrst    : std_logic;
     signal hcounter : std_logic_vector(9 downto 0);
     signal vcounter : std_logic_vector(9 downto 0);
-    signal h_000, h_703, h_800, h_639 : std_logic;
-    signal v_000, v_522, v_525, v_479 : std_logic;
+    signal h_000, h_640, h_704, h_800 : std_logic;
+    signal v_000, v_480, v_523, v_525 : std_logic;
     signal h_vs, v_vs, vs : std_logic;
+    signal RAM_out_bus : std_logic_vector(7 downto 0);
     
 
 ----------clk ip component----------
@@ -44,19 +45,26 @@ end component;
 ----------------hlogic-------------
 component hlogic is
   Port (hcounter : in std_logic_vector(9 downto 0);
-        h_703 : inout std_logic;
-        h_800 : inout std_logic;
         h_000 : inout std_logic;
-        h_639 : inout std_logic);
+        h_640 : inout std_logic;
+        h_704 : inout std_logic;
+        h_800 : inout std_logic);
 end component;
 -------------------------------------
 ----------------hlogic---------------
 component vlogic
   Port (vcounter : in std_logic_vector(9 downto 0);
         v_000 : inout std_logic;
-        v_522 : inout std_logic;
-        v_525 : inout std_logic;
-        v_479 : inout std_logic);
+        v_480 : inout std_logic;
+        v_523 : inout std_logic;
+        v_525 : inout std_logic);
+end component;
+-------------------------------------
+----------------VRAM---------------
+component VRAM is
+    port(--inouts
+         RAM_addrs : in std_logic_vector(19 downto 0);
+         RAM_out_bus : out std_logic_vector(7 downto 0));
 end component;
 -------------------------------------
 begin
@@ -74,36 +82,40 @@ H_counter : counter_10bit port map (clk_25mhz => clk_25mhz,
                                     q => hcounter);
                                     
 H_logic : hlogic port map(hcounter => hcounter,
-                          h_703 => h_703,
-                          h_800 => h_800,
                           h_000 => h_000,
-                          h_639 => h_639);
+                          h_640 => h_640,
+                          h_704 => h_704,
+                          h_800 => h_800);
                           
 V_counter : counter_10bit port map (clk_25mhz => h_800,
                                     rst => v_525,
                                     q => vcounter);
  
 V_logic : vlogic port map(vcounter => vcounter,
-                          v_525 => v_525,
-                          v_522 => v_522,
                           v_000 => v_000,
-                          v_479 => v_479);
+                          v_480 => v_480,
+                          v_523 => v_523,
+                          v_525 => v_525);
+                      
+RAM : VRAM port map(RAM_addrs(9 downto 0) => hcounter,
+                    RAM_addrs(19 downto 10) => vcounter,
+                    RAM_out_bus => RAM_out_bus);
 
 
-process(h_000, h_703)
+process(h_000, h_704)
 begin
 if (h_000 = '1') then
     hsync <= '1';
-elsif (h_703 = '1') then
+elsif (h_704 = '1') then
     hsync <= '0';
 end if;
 end process;
 
-process(v_000, v_522)
+process(v_000, v_523)
 begin
 if (v_000 = '1') then
     vsync <= '1';
-elsif (v_522 = '1') then
+elsif (v_523 = '1') then
     vsync <= '0';
 end if;
 end process;
@@ -131,15 +143,15 @@ end process;
 
 process(hcounter, vcounter)
 begin
-if (to_integer(unsigned(hcounter)) > 160 and to_integer(unsigned(hcounter)) < 480 and 
-to_integer(unsigned(vcounter)) > 120 and to_integer(unsigned(vcounter)) < 360) then
-    red <= "0000";
-    blue <= "1111";
-    green <= "1111";
+if (to_integer(unsigned(hcounter)) > 48 and to_integer(unsigned(hcounter)) < 651 and
+    to_integer(unsigned(vcounter)) > 18 and to_integer(unsigned(vcounter)) < 498) then
+    red(2 downto 0) <= RAM_out_bus(7 downto 5);
+    blue(1 downto 0) <= RAM_out_bus(1 downto 0);
+    green(2 downto 0) <= RAM_out_bus(4 downto 2);
 else
-    red <= "0000";
-    blue <= "0000";
-    green <= "0000";
+    red(2 downto 0) <= "000";
+    blue(1 downto 0) <= "00";
+    green(2 downto 0) <= "000";
 end if;
 end process;
 
@@ -147,6 +159,9 @@ end process;
 --    red <= "0000";
 --    blue <= "0000";
 --    green <= "0000";
+blue(3 downto 2) <= "00";
+green(3) <= '0';
+red(3) <= '0';
 reset <= '0';
 vclock <= clk_25mhz and hrst;
 end Behavioral;
